@@ -6,12 +6,19 @@ Created on Fri Sep 03 15:40:29 2021
 """
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash
+import sqlite3
 import os
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
+import pickle
+
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 UPLOAD_FOLDER = './flask app/assets/images'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
@@ -60,10 +67,17 @@ def upload():
 def upload_chest():
    return render_template('upload_chest.html')
 
-
 @app.route('/upload_ct.html')
 def upload_ct():
    return render_template('upload_ct.html')
+   
+@app.route('/form.html')
+def form():
+   return render_template('form.html')
+   
+@app.route('/show.html')
+def show():
+   return render_template('show.html')
 
 @app.route('/uploaded_chest', methods = ['POST', 'GET'])
 def uploaded_chest():
@@ -136,6 +150,36 @@ def uploaded_ct():
    print(inception_ct_pred)
 
    return render_template('results_ct.html',inception_ct_pred=inception_ct_pred)
+   
+  
+@app.route('/uploaded_form', methods=["GET", "POST"])
+def uploaded_form():
+    if request.method == "POST":
+        file = open('models/model.pkl', 'rb')
+        clf = pickle.load(file)
+        file.close()
+        myDict = request.form
+        email = myDict['email']
+        fever = float(myDict['fever'])
+        age = int(myDict['age'])
+        pain = int(myDict['pain'])
+        runnyNose = int(myDict['runnyNose'])
+        diffBreath = int(myDict['diffBreath'])
+        # Code for Inference
+        inputFeatures = [fever, pain, age, runnyNose, diffBreath]
+        infProb = clf.predict_proba([inputFeatures])[0][1]
+        logistic_reg_pred = str('%.2f' % (infProb*100) + '% COVID-19 Infection Probability') 
+        print(infProb)
+        
+        conn = get_db_connection()
+        conn.execute('INSERT INTO users (email, fever, bodyPain, age, runnyNose, diffBreath, infectionProb) VALUES (?,?,?,?,?,?,?)',
+            (email, fever, pain, age, runnyNose, diffBreath, round(infProb*100, 2)))
+        conn.commit()
+        conn.close()
+        
+        return render_template('show.html', logistic_reg_pred=logistic_reg_pred)
+    return render_template('form.html')
+
    
    
 if __name__ == '__main__':
