@@ -5,7 +5,7 @@ Created on Fri Sep 03 15:40:29 2021
 @author: Jay Satija
 """
 
-from flask import Flask, render_template, request, session, redirect, url_for, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 import sqlite3
 import os
 from werkzeug.utils import secure_filename
@@ -14,21 +14,54 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import pickle
+import json
+import datetime
+from firebase_admin import credentials, firestore, initialize_app, storage
+from google.cloud import storage as gcp_storage
 
 def get_db_connection():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
 
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    # bucket_name = "your-bucket-name"
+    # source_file_name = "local/path/to/file"
+    # destination_blob_name = "storage-object-name"
+
+    storage_client = gcp_storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print(
+        "File {} uploaded to {}.".format(
+            source_file_name, destination_blob_name
+        )
+    )
+
 UPLOAD_FOLDER = './flask app/assets/images'
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
 # Create Database if it doesn't exist
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="minor-project-43e33-edc3fb7b3ae6.json"
 
 app = Flask(__name__,static_url_path='/assets',
             static_folder='./flask app/assets', 
             template_folder='./flask app')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+# Initialize Firestore DB
+cred = credentials.Certificate('key.json')
+default_app = initialize_app(cred, {
+    'storageBucket': 'minor-project-43e33.appspot.com'
+})
+bucket = storage.bucket()
+db = firestore.client()
+users_ref = db.collection('users')
 
 # No cacheing at all for API endpoints.
 @app.after_request
@@ -120,6 +153,11 @@ def uploaded_chest():
    else:
       inception_chest_pred = str('%.2f' % ((1-probability[0])*100) + '% NonCOVID')
    print(inception_chest_pred)
+   
+   try:
+      upload_blob(bucket.name, './flask app/assets/images/upload_chest.jpg', 'upload_chest ' + str(datetime.datetime.now()) + '.jpg')
+   except:
+      print("Upload Fail...")
 
    return render_template('results_chest.html', inception_chest_pred=inception_chest_pred)
 
@@ -164,6 +202,11 @@ def uploaded_ct():
    else:
       inception_ct_pred = str('%.2f' % ((1-probability[0])*100) + '% NonCOVID')
    print(inception_ct_pred)
+   
+   try:
+      upload_blob(bucket.name, './flask app/assets/images/upload_ct.jpg', 'upload_ct ' + str(datetime.datetime.now()) + '.jpg')
+   except:
+      print("Upload Fail...")
 
    return render_template('results_ct.html',inception_ct_pred=inception_ct_pred)
    
@@ -200,6 +243,17 @@ def uploaded_form():
             (email, fever, pain, age, runnyNose, diffBreath, round(infProb*100, 2)))
         conn.commit()
         conn.close()
+        
+        firestore_entry = request.form.to_dict()
+        firestore_entry['infectionProb'] = round(infProb*100, 2)
+        firestore_entry['created'] = str(datetime.datetime.now())
+        json_string = json.dumps(firestore_entry)
+        json_object = json.loads(json_string)
+        
+        try:
+            users_ref.document(email).set(json_object)
+        except Exception as e:
+            print(e)
         
         return render_template('show.html', logistic_reg_pred=logistic_reg_pred)
     return render_template('form.html')
