@@ -138,7 +138,9 @@ def uploaded_chest():
    interpreter.allocate_tensors()
     
    image = cv2.imread('./flask app/assets/images/upload_chest.jpg') # read file
+   image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
    image = cv2.resize(image,(224,224))
+   image = np.array(image) / 255
    image = np.array(image, dtype=np.float32)
    interpreter.set_tensor(input_details[0]['index'], [image])
     
@@ -187,7 +189,9 @@ def uploaded_ct():
    interpreter.allocate_tensors()
     
    image = cv2.imread('./flask app/assets/images/upload_ct.jpg') # read file
+   image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
    image = cv2.resize(image,(224,224))
+   image = np.array(image) / 255
    image = np.array(image, dtype=np.float32)
    interpreter.set_tensor(input_details[0]['index'], [image])
     
