@@ -113,37 +113,36 @@
                     <p>Contact With Us</p>
                     <h3>Still Have a Question?</h3>
                 </div><!-- /.block-title -->
-                <form action="inc/sendemail.php" class="contact-form-validated contact-one__form">
+                <form action="/sendemail" method="POST" enctype="multipart/form-data">
                     <div class="row">
-                        <div class="col-lg-6">
-                            <input type="text" name="name" placeholder="Name">
+                        <div class="form-group col-lg-6">
+                            <input type="text" class="form-control" id="name" name="name" placeholder="Name">
                         </div><!-- /.col-lg-6 -->
-                        <div class="col-lg-6">
-                            <input type="text" name="email" placeholder="Email Address">
+                        <div class="form-group col-lg-6">
+                            <input type="text" class="form-control" id="email" name="email" placeholder="Email Address">
                         </div><!-- /.col-lg-6 -->
-                        <div class="col-lg-6">
-                            <input type="text" name="phone" placeholder="Phone Number">
+                        <div class="form-group col-lg-6">
+                            <input type="text" class="form-control" id="phone" name="phone" placeholder="Phone Number">
                         </div><!-- /.col-lg-6 -->
-                        <div class="col-lg-6">
-                            <select class="selectpicker" name="discuss">
+                        <div class="form-group col-lg-6">
+                            <select class="form-control custom select" name="discuss" id="discuss">
                                 <option value="">Discussion For</option>
-                                <option value="#">For Test Kit</option>
-                                <option value="#">For Quarantine</option>
+                                <option value="For Test Kit">For Test Kit</option>
+                                <option value="For Quarantine">For Quarantine</option>
                             </select><!-- /#.selectpicker -->
                         </div><!-- /.col-lg-6 -->
-                        <div class="col-lg-12">
-                            <input type="text" name="subject" placeholder="Subject">
+                        <div class="form-group col-lg-12">
+                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject">
                         </div><!-- /.col-lg-12 -->
-                        <div class="col-lg-12">
-                            <textarea name="message" placeholder="Write Message"></textarea>
+                        <div class="form-group col-lg-12">
+                            <textarea id="message" name="message" class="form-control" placeholder="Write Message"></textarea>
                         </div><!-- /.col-lg-12 -->
                         <div class="col-lg-12 text-center">
-                            <button type="submit" class="thm-btn contact-one__btn">Send Message</button>
+                            <input type = "submit" value="Submit" class="btn btn-success">  
                             <!-- /.thm-btn contact-one__btn -->
                         </div><!-- /.col-lg-12 -->
                     </div><!-- /.row -->
                 </form><!-- /.contact-one__form -->
-                <div class="result"></div><!-- /.result -->
             </div><!-- /.container -->
         </section><!-- /.contact-one -->
 
@@ -241,7 +240,7 @@
             </div><!-- /.site-footer-one__upper -->
             <div class="site-footer-one__bottom">
                 <div class="container">
-                    <p>© copyright 2021 by <a href="#">jaysatija712</a></p>
+                    <p>Handcrafted with <a href="#">❤</a> by <a href="#">Jay Satija</a></p>
                 </div><!-- /.container -->
             </div><!-- /.site-footer-one__bottom -->
         </footer><!-- /.site-footer-one -->

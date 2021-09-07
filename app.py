@@ -6,6 +6,7 @@ Created on Fri Sep 03 15:40:29 2021
 """
 
 from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
+from flask_mail import Mail, Message
 import sqlite3
 import os
 from werkzeug.utils import secure_filename
@@ -54,6 +55,17 @@ app = Flask(__name__,static_url_path='/assets',
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
+mail = Mail() # instantiate the mail class
+
+# configuration of mail
+app.config['MAIL_SERVER']='smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USERNAME'] = 'jaysatija712@gmail.com'
+app.config['MAIL_PASSWORD'] = 'ogxjvdvmplfgxewv'
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+mail.init_app(app)
+
 # Initialize Firestore DB
 cred = credentials.Certificate('key.json')
 default_app = initialize_app(cred, {
@@ -62,6 +74,7 @@ default_app = initialize_app(cred, {
 bucket = storage.bucket()
 db = firestore.client()
 users_ref = db.collection('users')
+images_ref = db.collection('images')
 
 # No cacheing at all for API endpoints.
 @app.after_request
@@ -156,10 +169,23 @@ def uploaded_chest():
       inception_chest_pred = str('%.2f' % ((1-probability[0])*100) + '% NonCOVID')
    print(inception_chest_pred)
    
+   blob_image_name = 'upload_chest ' + str(datetime.datetime.now()) + '.jpg'
+   
    try:
-      upload_blob(bucket.name, './flask app/assets/images/upload_chest.jpg', 'upload_chest ' + str(datetime.datetime.now()) + '.jpg')
+      upload_blob(bucket.name, './flask app/assets/images/upload_chest.jpg', blob_image_name)
    except:
-      print("Upload Fail...")
+      print("Upload Failed...")
+      
+   firestore_entry = {}
+   firestore_entry['id'] = blob_image_name
+   firestore_entry['prediction'] = inception_chest_pred
+   json_string = json.dumps(firestore_entry)
+   json_object = json.loads(json_string)
+        
+   try:
+      images_ref.document(blob_image_name).set(json_object)
+   except Exception as e:
+      print(e)
 
    return render_template('results_chest.html', inception_chest_pred=inception_chest_pred)
 
@@ -207,10 +233,23 @@ def uploaded_ct():
       inception_ct_pred = str('%.2f' % ((1-probability[0])*100) + '% NonCOVID')
    print(inception_ct_pred)
    
+   blob_image_name = 'upload_ct ' + str(datetime.datetime.now()) + '.jpg'
+   
    try:
-      upload_blob(bucket.name, './flask app/assets/images/upload_ct.jpg', 'upload_ct ' + str(datetime.datetime.now()) + '.jpg')
+      upload_blob(bucket.name, './flask app/assets/images/upload_ct.jpg', blob_image_name)
    except:
-      print("Upload Fail...")
+      print("Upload Failed...")
+      
+   firestore_entry = {}
+   firestore_entry['id'] = blob_image_name
+   firestore_entry['prediction'] = inception_ct_pred
+   json_string = json.dumps(firestore_entry)
+   json_object = json.loads(json_string)
+        
+   try:
+      images_ref.document(blob_image_name).set(json_object)
+   except Exception as e:
+      print(e)
 
    return render_template('results_ct.html',inception_ct_pred=inception_ct_pred)
    
@@ -262,8 +301,26 @@ def uploaded_form():
         return render_template('show.html', logistic_reg_pred=logistic_reg_pred)
     return render_template('form.html')
 
+@app.route('/thanks.html')
+def thanks():
+   return render_template('thanks.html')
    
-   
+@app.route('/sendemail', methods=["GET", "POST"])
+def sendemail():
+    if request.method == "POST":
+        myDict = request.form.to_dict()
+        msg = Message(myDict['subject'], sender='jaysatija712@gmail.com', recipients=['jaysatija712@gmail.com'])
+        msg.body = """
+        From: %s <%s>
+        Phone: %s 
+        Discussion: %s
+        Message: %s
+        """ % (myDict['name'], myDict['email'], myDict['phone'], myDict['discuss'], myDict['message'])
+        mail.send(msg)
+        print("---Mail Sent---")
+        return render_template('thanks.html', user_name = myDict['name'])
+    return render_template('contact.html')
+  
 if __name__ == '__main__':
     app.secret_key = ".."
     app.run(debug=True)
